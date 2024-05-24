@@ -70,8 +70,6 @@ class _VaccinationCalendarScreenState extends State<VaccinationCalendarScreen> {
                 firstDay: DateTime.utc(2023, 1, 1),
                 lastDay: DateTime.utc(2025, 12, 31),
                 focusedDay: _focusedDay,
-                locale: 'es_ES', // Cambiar al idioma español
-
                 calendarFormat: _calendarFormat,
                 selectedDayPredicate: (day) {
                   return isSameDay(_selectedDay, day);
@@ -128,7 +126,7 @@ class _VaccinationCalendarScreenState extends State<VaccinationCalendarScreen> {
                 itemBuilder: (context, index) {
                   final cita = _citas[_selectedDay]![index];
                   return ListTile(
-                    title: Text(cita.descripcion),
+                    title: Text(cita.descripcion ?? 'Sin descripción'),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -152,16 +150,18 @@ class _VaccinationCalendarScreenState extends State<VaccinationCalendarScreen> {
     );
   }
 
-  List<dynamic>? _getEventsList(DateTime day) {
+  List<dynamic> _getEventsList(DateTime day) {
     return _citas[day]
-        ?.map(
-          (cita) => {
-            'date': cita.fecha,
-            'title': cita.descripcion,
-            'mascotaId': cita.mascotaId,
-          },
-        )
-        .toList();
+            ?.map(
+              (cita) => {
+                'date': cita.fecha,
+                'title': cita.descripcion ??
+                    'Sin descripción', // Proporciona un valor predeterminado en caso de que cita.descripcion sea nulo
+                'mascotaId': cita.mascotaId,
+              },
+            )
+            .toList() ??
+        [];
   }
 
   Future<void> _showCitaDialog(BuildContext context, DateTime day) async {
@@ -317,7 +317,7 @@ class _VaccinationCalendarScreenState extends State<VaccinationCalendarScreen> {
   }
 
   Future<void> _editCita(Cita cita) async {
-    String descripcion = cita.descripcion;
+    String? descripcion = cita.descripcion;
     await showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -337,8 +337,8 @@ class _VaccinationCalendarScreenState extends State<VaccinationCalendarScreen> {
             ),
             TextButton(
               onPressed: () {
-                if (descripcion.isNotEmpty) {
-                  _updateCita(cita.id, cita.fecha, descripcion);
+                if (descripcion!.isNotEmpty) {
+                  _updateCita(cita.id, cita.fecha, descripcion!);
                 }
                 Navigator.pop(context);
               },

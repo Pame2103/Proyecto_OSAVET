@@ -1,167 +1,173 @@
 import 'package:flutter/material.dart';
-
-// Clase para representar una cita
-class Appointment {
-  final String title;
-  final String details;
-
-  Appointment({required this.title, required this.details});
-}
+import 'package:table_calendar/table_calendar.dart';
+import 'package:intl/intl.dart';
 
 class AppointmentScreen extends StatefulWidget {
+  const AppointmentScreen({Key? key}) : super(key: key);
+
   @override
   _AppointmentScreenState createState() => _AppointmentScreenState();
 }
 
 class _AppointmentScreenState extends State<AppointmentScreen> {
-  // Lista de citas
-  List<Appointment> appointments = [
-    Appointment(title: 'Cita 1', details: 'Castracion de gato'),
-    Appointment(title: 'Cita 2', details: 'Baño y peluqueado'),
-    Appointment(title: 'Cita 3', details: 'Desparacitacion'),
-    Appointment(title: 'Cita 4', details: 'Vacunacion'),
-  ];
+  CalendarFormat _calendarFormat = CalendarFormat.month;
+  DateTime _selectedDay = DateTime.now();
+  DateTime _focusedDay = DateTime.now();
+  final _formKey = GlobalKey<FormState>();
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _petNameController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  TimeOfDay? _selectedTime;
+  final List<Map<String, String>> _appointments = [];
+
+  Future<void> _selectTime(BuildContext context) async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: _selectedTime ?? TimeOfDay.now(),
+    );
+    if (picked != null && picked != _selectedTime) {
+      setState(() {
+        _selectedTime = picked;
+      });
+    }
+  }
+
+  Future<void> _saveAppointment() async {
+    if (_formKey.currentState!.validate() && _selectedTime != null) {
+      final appointment = {
+        'name': _nameController.text,
+        'petName': _petNameController.text,
+        'phone': _phoneController.text,
+        'date': _selectedDay.toIso8601String(),
+        'time': _selectedTime!.format(context),
+      };
+
+      setState(() {
+        _appointments.add(appointment);
+      });
+
+      _nameController.clear();
+      _petNameController.clear();
+      _phoneController.clear();
+      _selectedTime = null;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cita guardada con éxito')),
+      );
+    }
+  }
+
+  List<Map<String, String>> _getAppointmentsForSelectedDay() {
+    return _appointments.where((appointment) {
+      return isSameDay(DateTime.parse(appointment['date']!), _selectedDay);
+    }).toList();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Gestión de Citas")),
-      backgroundColor: const Color.fromARGB(
-          255, 85, 205, 226), // Color de fondo del Scaffold
-      body: Column(
-        children: <Widget>[
-          // Encabezado
-          Container(
-            padding: const EdgeInsets.all(16.0),
-            child: const Text(
-              "Lista de Citas",
-              style: TextStyle(
-                fontSize: 20.0,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          // Lista de citas
-          Expanded(
-            child: ListView.builder(
-              itemCount: appointments.length, // Número de citas
-              itemBuilder: (BuildContext context, int index) {
-                // Construcción de cada elemento de la lista de citas
-                return ListTile(
-                  title: Text(appointments[index].title),
-                  subtitle: Text(appointments[index].details),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      IconButton(
-                        icon: const Icon(Icons.edit),
-                        onPressed: () {
-                          // Acción al presionar el botón de editar cita
-                          _editAppointment(context, index);
-                        },
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete),
-                        onPressed: () {
-                          // Acción al presionar el botón de eliminar cita
-                          _deleteAppointment(index);
-                        },
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ),
-          // Botón para agregar nueva cita
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: ElevatedButton(
-              onPressed: () {
-                // Acción al presionar el botón para agregar nueva cita
-                _addAppointment();
-              },
-              child: const Text("Agregar Cita"),
-            ),
-          ),
-        ],
+      appBar: AppBar(
+        title: const Text('Gestión de Citas Veterinaria'),
       ),
-    );
-  }
-
-  // Función para editar una cita
-  void _editAppointment(BuildContext context, int index) {
-    // Mostrar un cuadro de diálogo para editar la cita
-    showDialog(
-      context: context,
-      builder: (context) {
-        TextEditingController titleController =
-            TextEditingController(text: appointments[index].title);
-        TextEditingController detailsController =
-            TextEditingController(text: appointments[index].details);
-
-        return AlertDialog(
-          title: Text("Editar Cita"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: titleController,
-                decoration: InputDecoration(labelText: "Título"),
-              ),
-              TextField(
-                controller: detailsController,
-                decoration: InputDecoration(labelText: "Detalles"),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context); // Cerrar el cuadro de diálogo
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            TableCalendar(
+              focusedDay: _focusedDay,
+              firstDay: DateTime(2020),
+              lastDay: DateTime(2030),
+              calendarFormat: _calendarFormat,
+              selectedDayPredicate: (day) {
+                return isSameDay(_selectedDay, day);
               },
-              child: Text("Cancelar"),
+              onDaySelected: (selectedDay, focusedDay) {
+                setState(() {
+                  _selectedDay = selectedDay;
+                  _focusedDay = focusedDay;
+                });
+              },
+              onFormatChanged: (format) {
+                setState(() {
+                  _calendarFormat = format;
+                });
+              },
             ),
-            ElevatedButton(
-              onPressed: () {
-                // Guardar los cambios y cerrar el cuadro de diálogo
-                Appointment editedAppointment = Appointment(
-                  title: titleController.text,
-                  details: detailsController.text,
-                );
-                _editAppointmentData(index, editedAppointment);
-                Navigator.pop(context);
-              },
-              child: Text("Guardar"),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  children: [
+                    TextFormField(
+                      controller: _nameController,
+                      decoration:
+                          const InputDecoration(labelText: 'Nombre del dueño'),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Por favor ingrese el nombre del dueño';
+                        }
+                        return null;
+                      },
+                    ),
+                    TextFormField(
+                      controller: _petNameController,
+                      decoration: const InputDecoration(
+                          labelText: 'Nombre de la mascota'),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Por favor ingrese el nombre de la mascota';
+                        }
+                        return null;
+                      },
+                    ),
+                    TextFormField(
+                      controller: _phoneController,
+                      decoration: const InputDecoration(labelText: 'Teléfono'),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Por favor ingrese el teléfono';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    TextButton(
+                      onPressed: () => _selectTime(context),
+                      child: const Text(
+                        'Seleccionar Hora',
+                        style: TextStyle(color: Colors.blue),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: _saveAppointment,
+                      child: const Text('Guardar Cita'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Column(
+                children: _getAppointmentsForSelectedDay().map((appointment) {
+                  return Card(
+                    margin: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: ListTile(
+                      title: Text(
+                          '${appointment['name']} - ${appointment['petName']}'),
+                      subtitle: Text(
+                        'Tel: ${appointment['phone']} - ${DateTime.parse(appointment['date']!).toLocal().toIso8601String().split('T').first} a las ${appointment['time']}',
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
             ),
           ],
-        );
-      },
+        ),
+      ),
     );
-  }
-
-  // Función para editar los datos de una cita
-  void _editAppointmentData(int index, Appointment editedAppointment) {
-    setState(() {
-      appointments[index] = editedAppointment;
-    });
-  }
-
-  // Función para eliminar una cita
-  void _deleteAppointment(int index) {
-    setState(() {
-      appointments.removeAt(index);
-    });
-  }
-
-  // Función para agregar una nueva cita
-  void _addAppointment() {
-    setState(() {
-      // Simplemente agrega una cita de ejemplo
-      appointments.add(Appointment(
-        title: 'Nueva Cita',
-        details: 'Detalles de la nueva cita',
-      ));
-    });
   }
 }

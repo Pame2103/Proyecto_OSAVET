@@ -34,7 +34,8 @@ class Event {
 class Cita {
   final String id;
   final DateTime fecha;
-  final String descripcion;
+  
+  final String? descripcion;
   final String mascotaId;
 
   Cita({
