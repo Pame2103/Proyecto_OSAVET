@@ -182,121 +182,75 @@ class _AddNoticiaState extends State<AddNoticia> {
                       .snapshots(),
                   builder: (BuildContext context,
                       AsyncSnapshot<QuerySnapshot> snapshot) {
+                    // Manejo de errores
                     if (snapshot.hasError) {
                       return Text('Error: ${snapshot.error}');
                     }
 
+                    // Mientras se cargan los datos, se muestra un indicador de progreso
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator());
                     }
 
+                    // Una vez que los datos están listos, se construye la DataTable
                     return SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
                       child: DataTable(
                         columns: const [
                           DataColumn(
-                            label: Text(
-                              'Título',
-                              style: TextStyle(color: Colors.white),
-                            ),
-                          ),
+                              label: Text('Título',
+                                  style: TextStyle(color: Colors.white))),
                           DataColumn(
-                            label: Text(
-                              'Descripción',
-                              style: TextStyle(color: Colors.white),
-                            ),
-                            numeric: true, // Ajusta el ancho de la columna
-                          ),
+                              label: Text('Descripción',
+                                  style: TextStyle(color: Colors.white))),
                           DataColumn(
-                            label: Text(
-                              'Fecha',
-                              style: TextStyle(color: Colors.white),
-                            ),
-                            numeric: true, // Ajusta el ancho de la columna
-                          ),
+                              label: Text('Fecha',
+                                  style: TextStyle(color: Colors.white))),
                           DataColumn(
-                            label: Text(
-                              'Hora',
-                              style: TextStyle(color: Colors.white),
-                            ),
-                            numeric: true, // Ajusta el ancho de la columna
-                          ),
+                              label: Text('Hora',
+                                  style: TextStyle(color: Colors.white))),
                           DataColumn(
-                            label: Text(
-                              'Acciones',
-                              style: TextStyle(color: Colors.white),
-                            ),
-                            numeric: true, // Ajusta el ancho de la columna
-                          ),
+                              label: Text('Acciones',
+                                  style: TextStyle(color: Colors.white))),
                         ],
-                        rows: snapshot.data!.docs
-                            .map((DocumentSnapshot document) {
+                        rows: snapshot.data!.docs.map((document) {
                           Map<String, dynamic>? data =
                               document.data() as Map<String, dynamic>?;
                           if (data != null) {
-                            return DataRow(
-                              cells: [
-                                DataCell(
-                                  Text(
-                                    data['titulo'] ?? '',
-                                    style: const TextStyle(color: Colors.white),
-                                  ),
-                                ),
-                                DataCell(
-                                  Text(
-                                    data['descripcion'] ?? '',
-                                    style: const TextStyle(color: Colors.white),
-                                  ),
-                                ),
-                                DataCell(
-                                  Text(
-                                    data['fecha'] ?? '',
-                                    style: const TextStyle(color: Colors.white),
-                                  ),
-                                ),
-                                DataCell(
-                                  Text(
-                                    data['hora'] ?? '',
-                                    style: const TextStyle(color: Colors.white),
-                                  ),
-                                ),
-                                DataCell(
-                                  Row(
-                                    children: [
-                                      IconButton(
-                                        icon: const Icon(Icons.edit,
-                                            color: Colors.white),
-                                        onPressed: () {
-                                          _editarNoticia(document.id, data);
-                                        },
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(Icons.delete,
-                                            color: Colors.white),
-                                        onPressed: () {
-                                          _eliminarNoticia(document.id);
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            );
+                            return DataRow(cells: [
+                              DataCell(Text(data['titulo'] ?? '',
+                                  style: const TextStyle(color: Colors.white),
+                                  softWrap: true)),
+                              DataCell(Text(data['descripcion'] ?? '',
+                                  style: const TextStyle(color: Colors.white),
+                                  softWrap: true)),
+                              DataCell(Text(data['fecha'] ?? '',
+                                  style: const TextStyle(color: Colors.white),
+                                  softWrap: true)),
+                              DataCell(Text(data['hora'] ?? '',
+                                  style: const TextStyle(color: Colors.white),
+                                  softWrap: true)),
+                              DataCell(Row(children: [
+                                IconButton(
+                                    icon: const Icon(Icons.edit,
+                                        color: Colors.white),
+                                    onPressed: () =>
+                                        _editarNoticia(document.id, data)),
+                                IconButton(
+                                    icon: const Icon(Icons.delete,
+                                        color: Colors.white),
+                                    onPressed: () =>
+                                        _eliminarNoticia(document.id))
+                              ])),
+                            ]);
                           } else {
-                            return const DataRow(
-                              cells: [
-                                DataCell(
-                                  Text(
-                                    'Error en los datos',
-                                    style: TextStyle(color: Colors.white),
-                                  ),
-                                ),
-                                DataCell(Text('')),
-                                DataCell(Text('')),
-                                DataCell(Text('')),
-                                DataCell(Text('')),
-                              ],
-                            );
+                            return const DataRow(cells: [
+                              DataCell(Text('Error en los datos',
+                                  style: TextStyle(color: Colors.white))),
+                              DataCell(Text('')),
+                              DataCell(Text('')),
+                              DataCell(Text('')),
+                              DataCell(Text('')),
+                            ]);
                           }
                         }).toList(),
                       ),
