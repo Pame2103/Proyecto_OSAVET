@@ -3,9 +3,10 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 
 class AppointmentScreen extends StatefulWidget {
-  const AppointmentScreen({Key? key}) : super(key: key);
+  const AppointmentScreen({super.key});
 
   @override
+  // ignore: library_private_types_in_public_api
   _AppointmentScreenState createState() => _AppointmentScreenState();
 }
 
