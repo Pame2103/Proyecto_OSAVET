@@ -131,9 +131,9 @@ class _AddEventoState extends State<AddEvento> {
                     ElevatedButton(
                       onPressed: () {
                         if (_isEditing) {
-                          // Actualizar noticia
+                          // Actualizar evento
                           FirebaseFirestore.instance
-                              .collection('noticias')
+                              .collection('eventos')
                               .doc(_editingDocId)
                               .update({
                             'titulo': _tituloController.text.trim(),
@@ -145,7 +145,7 @@ class _AddEventoState extends State<AddEvento> {
                           _isEditing = false;
                           _editingDocId = null;
                         } else {
-                          // Agregar nueva Evento
+                          // Agregar nuevo evento
                           final titulo = _tituloController.text.trim();
                           final descripcion =
                               _descripcionController.text.trim();
@@ -168,8 +168,7 @@ class _AddEventoState extends State<AddEvento> {
                           }
                         }
                       },
-                      child:
-                          Text(_isEditing ? 'Actualizar' : 'Agregar Evento'),
+                      child: Text(_isEditing ? 'Actualizar' : 'Agregar Evento'),
                     ),
                   ],
                 ),
@@ -190,116 +189,71 @@ class _AddEventoState extends State<AddEvento> {
                       return const Center(child: CircularProgressIndicator());
                     }
 
-                    return SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: DataTable(
-                        columns: const [
-                          DataColumn(
-                            label: Text(
-                              'Título',
-                              style: TextStyle(color: Colors.white),
-                            ),
-                          ),
-                          DataColumn(
-                            label: Text(
-                              'Descripción',
-                              style: TextStyle(color: Colors.white),
-                            ),
-                            numeric: true, // Ajusta el ancho de la columna
-                          ),
-                          DataColumn(
-                            label: Text(
-                              'Fecha',
-                              style: TextStyle(color: Colors.white),
-                            ),
-                            numeric: true, // Ajusta el ancho de la columna
-                          ),
-                          DataColumn(
-                            label: Text(
-                              'Hora',
-                              style: TextStyle(color: Colors.white),
-                            ),
-                            numeric: true, // Ajusta el ancho de la columna
-                          ),
-                          DataColumn(
-                            label: Text(
-                              'Acciones',
-                              style: TextStyle(color: Colors.white),
-                            ),
-                            numeric: true, // Ajusta el ancho de la columna
-                          ),
-                        ],
-                        rows: snapshot.data!.docs
-                            .map((DocumentSnapshot document) {
-                          Map<String, dynamic>? data =
-                              document.data() as Map<String, dynamic>?;
-                          if (data != null) {
-                            return DataRow(
-                              cells: [
-                                DataCell(
+                    return ListView(
+                      children: snapshot.data!.docs.map((document) {
+                        Map<String, dynamic>? data =
+                            document.data() as Map<String, dynamic>?;
+                        if (data != null) {
+                          return Card(
+                            margin: const EdgeInsets.all(10.0),
+                            child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
                                   Text(
                                     data['titulo'] ?? '',
-                                    style: const TextStyle(color: Colors.white),
+                                    style: const TextStyle(
+                                        color: Colors.black, fontSize: 16.0),
                                   ),
-                                ),
-                                DataCell(
+                                  const SizedBox(height: 4.0),
                                   Text(
                                     data['descripcion'] ?? '',
-                                    style: const TextStyle(color: Colors.white),
+                                    style: const TextStyle(
+                                        color: Colors.black54),
                                   ),
-                                ),
-                                DataCell(
+                                  const SizedBox(height: 4.0),
                                   Text(
-                                    data['fecha'] ?? '',
-                                    style: const TextStyle(color: Colors.white),
+                                    'Fecha: ${data['fecha'] ?? ''}',
+                                    style: const TextStyle(
+                                        color: Colors.black54),
                                   ),
-                                ),
-                                DataCell(
+                                  const SizedBox(height: 4.0),
                                   Text(
-                                    data['hora'] ?? '',
-                                    style: const TextStyle(color: Colors.white),
+                                    'Hora: ${data['hora'] ?? ''}',
+                                    style: const TextStyle(
+                                        color: Colors.black54),
                                   ),
-                                ),
-                                DataCell(
                                   Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
                                     children: [
                                       IconButton(
                                         icon: const Icon(Icons.edit,
-                                            color: Colors.white),
-                                        onPressed: () {
-                                          _editarEvento(document.id, data);
-                                        },
+                                            color: Colors.blue),
+                                        onPressed: () => _editarEvento(
+                                            document.id, data),
                                       ),
                                       IconButton(
                                         icon: const Icon(Icons.delete,
-                                            color: Colors.white),
-                                        onPressed: () {
-                                          _eliminarEvento(document.id);
-                                        },
+                                            color: Colors.red),
+                                        onPressed: () =>
+                                            _eliminarEvento(document.id),
                                       ),
                                     ],
                                   ),
-                                ),
-                              ],
-                            );
-                          } else {
-                            return const DataRow(
-                              cells: [
-                                DataCell(
-                                  Text(
-                                    'Error en los datos',
-                                    style: TextStyle(color: Colors.white),
-                                  ),
-                                ),
-                                DataCell(Text('')),
-                                DataCell(Text('')),
-                                DataCell(Text('')),
-                                DataCell(Text('')),
-                              ],
-                            );
-                          }
-                        }).toList(),
-                      ),
+                                ],
+                              ),
+                            ),
+                          );
+                        } else {
+                          return const Card(
+                            child: ListTile(
+                              title: Text('Error en los datos',
+                                  style: TextStyle(color: Colors.red)),
+                            ),
+                          );
+                        }
+                      }).toList(),
                     );
                   },
                 ),
