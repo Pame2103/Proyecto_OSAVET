@@ -5,38 +5,15 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pdfLib;
 import 'package:open_file/open_file.dart';
-import 'package:path_provider/path_provider.dart'; // Agregar esta importación
+import 'package:path_provider/path_provider.dart'; 
 import 'dart:io';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: const FirebaseOptions(
-      apiKey: "your_api_key",
-      authDomain: "your_auth_domain",
-      projectId: "your_project_id",
-      storageBucket: "your_storage_bucket",
-      messagingSenderId: "your_messaging_sender_id",
-      appId: "your_app_id",
-      measurementId: "your_measurement_id",
-    ),
-  );
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  String? _selectedProductId; 
   User? user = _auth.currentUser;
-
-  if (user == null) {
-    try {
-      final UserCredential userCredential =
-          await _auth.signInWithEmailAndPassword(
-        email: 'usuario@example.com',
-        password: 'contraseña',
-      );
-      print('Usuario autenticado: ${userCredential.user!.uid}');
-    } catch (e) {
-      print('Error al autenticar al usuario: $e');
-    }
-  }
 
   runApp(const MyApp());
 }
@@ -60,9 +37,11 @@ class MyApp extends StatelessWidget {
 class InvoiceItem {
   final String name;
   final double price;
+  
   int quantity;
 
-  InvoiceItem({required this.name, required this.price, required this.quantity});
+  InvoiceItem(
+      {required this.name, required this.price, required this.quantity});
 
   factory InvoiceItem.fromFirestore(DocumentSnapshot doc) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
@@ -70,6 +49,7 @@ class InvoiceItem {
       name: data['name'] ?? '',
       price: data['price']?.toDouble() ?? 0.0,
       quantity: data['quantity'] ?? 1,
+      
     );
   }
 }
@@ -92,6 +72,7 @@ class _BillingScreenState extends State<BillingScreen> {
   final TextEditingController _customerPhoneController = TextEditingController();
 
   InvoiceItem? _selectedProduct;
+  String? _selectedProductId; 
   double total = 0.0;
 
   double get totalWithIva => total * 1.13;
@@ -104,16 +85,19 @@ class _BillingScreenState extends State<BillingScreen> {
 
   void _fetchProducts() async {
     try {
-      QuerySnapshot querySnapshot = await FirebaseFirestore.instance.collection('servicios-productos').get();
+      QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+          .collection('servicios-productos')
+          .get();
       setState(() {
-        availableProducts = querySnapshot.docs.map((doc) => InvoiceItem.fromFirestore(doc)).toList();
+        availableProducts = querySnapshot.docs
+            .map((doc) => InvoiceItem.fromFirestore(doc))
+            .toList();
       });
     } catch (e) {
       print('Error fetching products: $e');
     }
   }
-
-  @override
+@override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -132,120 +116,167 @@ class _BillingScreenState extends State<BillingScreen> {
             },
           ),
         ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      'Fecha: ${DateTime.now().toLocal().toString().split(' ')[0]}',
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                    Text(
-                      'Hora: ${TimeOfDay.now().format(context)}',
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                  ],
-                ),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFFd0e0eb),
+                Color.fromARGB(255, 137, 161, 181),
+                Color(0xFFd0e0eb),
               ],
             ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _customerNameController,
-              decoration: const InputDecoration(labelText: 'Nombre del Cliente'),
-            ),
-            TextField(
-              controller: _customerPhoneController,
-              decoration: const InputDecoration(labelText: 'Teléfono del Cliente'),
-            ),
-            TextField(
-              controller: _issuerNameController,
-              decoration: const InputDecoration(labelText: 'Nombre del Emisor'),
-            ),
-                      const SizedBox(height: 10),
-            DropdownButton<InvoiceItem>(
-              hint: const Text('Seleccionar Producto'),
-              value: _selectedProduct,
-              onChanged: (InvoiceItem? newValue) {
-                setState(() {
-                  _selectedProduct = newValue;
-                  _quantityController.text = '1';
-                });
-              },
-              items: availableProducts.map((InvoiceItem product) {
-                return DropdownMenuItem<InvoiceItem>(
-                  value: product,
-                  child: Text('${product.name} - \$${product.price}'),
-                );
-              }).toList(),
-            ),
-            TextField(
-              controller: _quantityController,
-              decoration: const InputDecoration(labelText: 'Cantidad'),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 10),
-            ElevatedButton(
-              onPressed: _addItemToInvoice,
-              child: const Text('Agregar a Factura'),
-            ),
-            const SizedBox(height: 20),
-            Expanded(
-              child: ListView.builder(
-                itemCount: invoiceItems.length,
-                itemBuilder: (BuildContext context, int index) {
-                  return ListTile(
-                    title: Text(invoiceItems[index].name),
-                    subtitle: Text('Cantidad: ${invoiceItems[index].quantity}, Precio Unitario: \$${invoiceItems[index].price}'),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        IconButton(
-                          icon: const Icon(Icons.remove),
-                          onPressed: () => _decreaseQuantity(index),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.add),
-                          onPressed: () => _increaseQuantity(index),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete),
-                          onPressed: () => _removeItemFromInvoice(index),
-                        ),
-                      ],
-                    ),
-                  );
-                },
+          ),
+        ),
+      ),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFFd0e0eb),
+              Color.fromARGB(255, 137, 161, 181),
+              Color(0xFFd0e0eb),
+            ],
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        'Fecha: ${DateTime.now().toLocal().toString().split(' ')[0]}',
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                      Text(
+                        'Hora: ${TimeOfDay.now().format(context)}',
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-            ),
-            const Divider(),
-            TextField(
-              controller: _detailsController,
-              decoration: const InputDecoration(labelText: 'Detalle'),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'Total: \$${total.toStringAsFixed(2)}',
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+              const SizedBox(height: 10),
+              TextField(
+                controller: _customerNameController,
+                decoration:
+                    const InputDecoration(labelText: 'Nombre del Cliente'),
               ),
-            ),
-            Text(
-              'Total con IVA (13%): \$${totalWithIva.toStringAsFixed(2)}',
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+              TextField(
+                controller: _customerPhoneController,
+                decoration:
+                    const InputDecoration(labelText: 'Teléfono del Cliente'),
               ),
-            ),
-          ],
+              TextField(
+                controller: _issuerNameController,
+                decoration:
+                    const InputDecoration(labelText: 'Nombre del Emisor'),
+              ),
+              const SizedBox(height: 10),
+              StreamBuilder<QuerySnapshot>(
+  stream: FirebaseFirestore.instance.collection('servicios-productos').snapshots(),
+  builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
+    if (snapshot.hasError) {
+      return Text('Error: ${snapshot.error}');
+    }
+
+    if (snapshot.connectionState == ConnectionState.waiting) {
+      return Text('Cargando...');
+    }
+
+    List<DropdownMenuItem<String>> items = snapshot.data!.docs.map((DocumentSnapshot document) {
+      Map<String, dynamic> data = document.data() as Map<String, dynamic>;
+      String name = data['nombre'];
+      double price = data['precio'].toDouble();
+      return DropdownMenuItem<String>(
+        value: document.id,
+        child: Text('$name - \$$price'),
+      );
+    }).toList();
+
+    return DropdownButton<String>(
+      hint: const Text('Seleccionar Producto'),
+      value: _selectedProductId,
+      onChanged: (String? newValue) {
+        setState(() {
+          _selectedProductId = newValue;
+          _quantityController.text = '1';
+        });
+      },
+      items: items,
+    );
+  },
+),TextField(
+                controller: _quantityController,
+                decoration: const InputDecoration(labelText: 'Cantidad'),
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 10),
+              ElevatedButton(
+                onPressed: _addItemToInvoice,
+                child: const Text('Agregar a Factura'),
+              ),
+              const SizedBox(height: 20),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: invoiceItems.length,
+                  itemBuilder: (BuildContext context, int index) {
+                    return ListTile(
+                      title: Text(invoiceItems[index].name),
+                      subtitle: Text(
+                          'Cantidad: ${invoiceItems[index].quantity}, Precio Unitario: \$${invoiceItems[index].price}'),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          IconButton(
+                            icon: const Icon(Icons.remove),
+                            onPressed: () => _decreaseQuantity(index),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.add),
+                            onPressed: () => _increaseQuantity(index),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete),
+                            onPressed: () => _removeItemFromInvoice(index),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const Divider(),
+              TextField(
+                controller: _detailsController,
+                decoration: const InputDecoration(labelText: 'Detalle'),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'Total: \$${total.toStringAsFixed(2)}',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                'Total con IVA (13%): \$${totalWithIva.toStringAsFixed(2)}',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -256,7 +287,8 @@ class _BillingScreenState extends State<BillingScreen> {
       int quantity = int.tryParse(_quantityController.text) ?? 0;
       if (quantity > 0) {
         setState(() {
-          int index = invoiceItems.indexWhere((item) => item.name == _selectedProduct!.name);
+          int index = invoiceItems
+              .indexWhere((item) => item.name == _selectedProduct!.name);
           if (index != -1) {
             invoiceItems[index].quantity += quantity;
           } else {
@@ -298,7 +330,6 @@ class _BillingScreenState extends State<BillingScreen> {
 
   void _createPDF() async {
     final pdfLib.Document pdf = pdfLib.Document();
-
     pdf.addPage(
       pdfLib.Page(
         build: (context) => pdfLib.Column(
@@ -307,7 +338,8 @@ class _BillingScreenState extends State<BillingScreen> {
             pdfLib.Text('Factura', style: pdfLib.TextStyle(fontSize: 30)),
             pdfLib.SizedBox(height: 20),
             pdfLib.Text('Nombre del Cliente: ${_customerNameController.text}'),
-            pdfLib.Text('Teléfono del Cliente: ${_customerPhoneController.text}'),
+            pdfLib.Text(
+                'Teléfono del Cliente: ${_customerPhoneController.text}'),
             pdfLib.Text('Nombre del Emisor: ${_issuerNameController.text}'),
             pdfLib.SizedBox(height: 20),
             pdfLib.Text('Detalles: ${_detailsController.text}'),
@@ -316,12 +348,14 @@ class _BillingScreenState extends State<BillingScreen> {
             pdfLib.ListView(
               children: [
                 for (var item in invoiceItems)
-                  pdfLib.Text('${item.name} - Cantidad: ${item.quantity}, Precio Unitario: \$${item.price}'),
+                  pdfLib.Text(
+                      '${item.name} - Cantidad: ${item.quantity}, Precio Unitario: \$${item.price}'),
               ],
             ),
             pdfLib.SizedBox(height: 20),
             pdfLib.Text('Total: \$${total.toStringAsFixed(2)}'),
-            pdfLib.Text('Total con IVA (13%): \$${totalWithIva.toStringAsFixed(2)}'),
+            pdfLib.Text(
+                'Total con IVA (13%): \$${totalWithIva.toStringAsFixed(2)}'),
           ],
         ),
       ),
@@ -334,4 +368,3 @@ class _BillingScreenState extends State<BillingScreen> {
     OpenFile.open(path);
   }
 }
-
