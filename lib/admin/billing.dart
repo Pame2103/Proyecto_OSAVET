@@ -97,7 +97,8 @@ class _BillingScreenState extends State<BillingScreen> {
       print('Error fetching products: $e');
     }
   }
-@override
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -215,7 +216,11 @@ class _BillingScreenState extends State<BillingScreen> {
       items: items,
     );
   },
-),TextField(
+),
+
+
+
+              TextField(
                 controller: _quantityController,
                 decoration: const InputDecoration(labelText: 'Cantidad'),
                 keyboardType: TextInputType.number,
@@ -330,6 +335,7 @@ class _BillingScreenState extends State<BillingScreen> {
 
   void _createPDF() async {
     final pdfLib.Document pdf = pdfLib.Document();
+
     pdf.addPage(
       pdfLib.Page(
         build: (context) => pdfLib.Column(
